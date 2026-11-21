@@ -1,0 +1,11 @@
+*.class
+q*/bin/
+__pycache__/
+*.bak
+.DS_Store
+relatorio/*.aux
+relatorio/*.log
+relatorio/*.bbl
+relatorio/*.blg
+relatorio/*.out
+relatorio/*.toc

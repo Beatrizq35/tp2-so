@@ -1,0 +1,50 @@
+\begin{table}[H]
+\centering
+\small
+\caption{Questão 2: \textit{speedup} da melhor configuração paralela para $N=2000$, por máquina e número de \textit{threads}.}
+\label{tab:q2-speedup}
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Máquina} & \textbf{1} & \textbf{2} & \textbf{4} & \textbf{8} & \textbf{16} \\
+\midrule
+beatriz & 0,90 & 1,30 & 1,92 & 2,50 & 2,39 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Questão 2: comparação das estratégias de divisão (beatriz, $N=2000$, $T=8$ \textit{threads}; $T_s=1,1831$~s da melhor versão sequencial).}
+\label{tab:q2-estrategias-beatriz}
+\begin{tabular}{llrrr}
+\toprule
+\textbf{Estratégia} & \textbf{Ordem} & \textbf{Tempo (s)} & \textbf{$S_p$} & \textbf{$E_p$} \\
+\midrule
+Linhas contíguas & \texttt{ijk} & 1,8952 & 0,62 & 0,08 \\
+Linhas contíguas & \texttt{ikj} & 0,4777 & 2,48 & 0,31 \\
+Linhas cíclicas & \texttt{ijk} & 1,8877 & 0,63 & 0,08 \\
+Linhas cíclicas & \texttt{ikj} & 0,4728 & 2,50 & 0,31 \\
+Blocos & \texttt{ijk} & 1,6608 & 0,71 & 0,09 \\
+Blocos & \texttt{ikj} & 0,6815 & 1,74 & 0,22 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Questão 2: efeito do tamanho do bloco (beatriz, estratégia de blocos, $N=1000$, $T=8$ \textit{threads}).}
+\label{tab:q2-blocos-beatriz}
+\begin{tabular}{rrr}
+\toprule
+\textbf{$BS$} & \textbf{Tempo (s)} & \textbf{$S_p$} \\
+\midrule
+16 & 0,0989 & 1,38 \\
+32 & 0,0987 & 1,38 \\
+64 & 0,0904 & 1,51 \\
+128 & 0,0693 & 1,97 \\
+256 & 0,0638 & 2,14 \\
+\bottomrule
+\end{tabular}
+\end{table}

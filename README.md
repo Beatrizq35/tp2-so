@@ -1,5 +1,5 @@
 # Trabalho Prático 2 – Sistemas Operacionais (UFAM)
-Programação paralela com threads (C + pthreads). Entrega: 27/11/2026 (ColabWeb).
+Programação paralela com threads (**Java**, classe `Thread`). Entrega: 27/11/2026 (ColabWeb).
 
 ## Estrutura
 | Pasta | Conteúdo | Responsável |
@@ -12,7 +12,7 @@ Programação paralela com threads (C + pthreads). Entrega: 27/11/2026 (ColabWeb
 | `relatorio/` | Relatório em LaTeX (modelo SBC) | todos |
 
 ## Rodar os experimentos (Q1 e Q2)
-Linux ou WSL, com `gcc`:
+Linux, macOS, WSL ou Git Bash, com JDK 11+ (`javac -version`):
 
     cd q2_matrizes
     ./run_bench.sh seunome        # gera resultados_seunome.csv
@@ -26,5 +26,5 @@ Linux ou WSL, com `gcc`:
 Copie os PNGs desejados para `relatorio/figuras/`.
 
 ## Padrão combinado
-C com pthreads, `gcc -O2 -pthread`, média de 5 execuções, mesma inicialização determinística dos dados.
+Java (JDK 11+), `javac` + `java -cp bin`, média de 5 execuções (precedidas de 1 execução de aquecimento da JVM, não medida), mesma inicialização determinística dos dados.
 Registrar qualquer uso de IA, site ou livro (exigência do enunciado) na seção "Registro de Fontes" do relatório.
