@@ -3,7 +3,8 @@
 ## Arquivos
 - `DotprodSeq.java` – versão sequencial
 - `DotprodPar.java` – versão paralela; nº de threads escolhido pelo usuário; cada thread recebe um bloco contíguo do vetor (a última pega o resto)
-- `run_bench.sh` – compila, roda todos os experimentos (média de 5 execuções) e gera `resultados_<maquina>.csv`
+- `run_bench.ps1` – versão para Windows (PowerShell) do script abaixo; repetições padrão: 30 (`-Repeticoes`)
+- `run_bench.sh` – compila, roda todos os experimentos (30 repetições; mude com `REPS=5 ./run_bench.sh ...`) e gera `resultados_<maquina>.csv`
 - `analyze.py` – valida os checksums, calcula Speedup (Sp = Ts/Tp), gera `tabelas.md`, `speedup_completo.csv` e gráficos PNG
 
 ## Requisitos
@@ -12,12 +13,27 @@
 
 ## Uso manual
     javac DotprodSeq.java DotprodPar.java
-    java DotprodSeq 1000000 5          # N=1.000.000, 5 repetições
-    java DotprodPar 1000000 4 5        # N=1.000.000, 4 threads, 5 repetições
+    java DotprodSeq 1000000 30         # N=1.000.000, 30 repetições
+    java DotprodPar 1000000 4 30       # N=1.000.000, 4 threads, 30 repetições
 
 ## Experimentos (cada colega, na própria máquina)
-    ./run_bench.sh nome                # ex.: ./run_bench.sh ruthelene
-    mv resultados_nome.csv ../resultados/q1/
+
+Antes de medir: notebook conectado na tomada, plano de energia "Alto desempenho", outros programas fechados. O script avisa se o plano não estiver ativo; não meça enquanto o aviso aparecer.
+
+### Windows (PowerShell) — use este
+Entre na pasta da questão (não na raiz do repositório):
+
+    cd "D:\Projetos\Faculdade\SO 2\tp2-so\q1_produto_escalar"
+    powershell -ExecutionPolicy Bypass -File .\run_bench.ps1 -Maquina seunome
+    Move-Item resultados_seunome.csv ..\resultados\q1\
+
+Troque `seunome` pelo seu nome, sem espaços (ex.: `-Maquina ruthelene`). O arquivo `.sh` não roda no PowerShell.
+Se a pasta `resultados\q1` não existir: `New-Item -ItemType Directory -Force ..\resultados\q1`.
+Precisa do JDK no PATH: teste com `javac -version`.
+
+### Linux / macOS / WSL
+    ./run_bench.sh seunome
+    mv resultados_seunome.csv ../resultados/q1/
 
 Juntar os CSVs e gerar tabelas e gráficos (dentro de `resultados/analise/q1/`):
     pip install pandas matplotlib tabulate

@@ -1,19 +1,34 @@
 #!/usr/bin/env python3
 """analyze.py - le resultados_*.csv da Questao 1, calcula Speedup (Sp = Ts/Tp) e gera tabelas e graficos.
-Uso: python3 analyze.py resultados_ruthelene.csv resultados_beatriz.csv ...
+
+Uso: python3 analyze.py resultados_*.csv     (ou liste os arquivos; padroes com * sao expandidos pelo script)
 Requer: pandas, matplotlib, tabulate  (pip install pandas matplotlib tabulate)
-Ts = tempo sequencial medio (tempo_medio_s da versao 'seq') para o mesmo N.
-Tp = tempo paralelo medio com T threads.  Sp = Ts / Tp.
-Tambem verifica se o checksum e o mesmo em todas as versoes para cada N (validacao)."""
-import sys, io
+
+Referencia principal: TEMPO MINIMO (tempo_min_s) das repeticoes - menos sensivel a interrupcoes.
+Tambem sao geradas as tabelas com a MEDIA (tempo_medio_s), para comparacao.
+  Sp_min = Ts_min / Tp_min   (Ts_min = menor tempo sequencial do mesmo N)
+  Sp_med = Ts_med / Tp_med
+  Ef = Sp / p                (eficiencia)
+Tambem verifica se o checksum e o mesmo em todas as versoes para cada N."""
+import sys, io, glob
 import pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# aceita padroes com * (o PowerShell nao expande, entao o proprio script expande)
+arquivos = []
+for arg in sys.argv[1:]:
+    achados = sorted(glob.glob(arg))
+    if not achados:
+        sys.exit(f"Nenhum arquivo encontrado para: {arg}")
+    arquivos.extend(achados)
+if not arquivos:
+    sys.exit("Uso: python analyze.py resultados_*.csv")
+
 dfs = []
-for f in sys.argv[1:]:
+for f in arquivos:
     meta, linhas = {}, []
-    for l in open(f, encoding="utf-8"):
+    for l in open(f, encoding="utf-8-sig"):
         if l.startswith("#"):
             k, _, v = l[1:].strip().partition("=")
             meta[k] = v
@@ -23,6 +38,7 @@ for f in sys.argv[1:]:
     d["maquina"] = meta.get("maquina", f)
     d["cpu"] = meta.get("cpu", "?")
     d["nucleos"] = int(meta.get("nucleos_logicos", 0))
+    d["repeticoes"] = meta.get("repeticoes", "?")
     dfs.append(d)
 df = pd.concat(dfs, ignore_index=True)
 
@@ -34,50 +50,63 @@ else:
     print("Validacao OK: checksum identico em todas as versoes para cada N.")
 
 seq = df[df.versao == "seq"]
-ts = seq.groupby(["maquina", "N"]).tempo_medio_s.min().rename("Ts")
 par = df[df.versao == "par"].copy()
-par = par.join(ts, on=["maquina", "N"])
-par["Sp"] = par.Ts / par.tempo_medio_s
-par["eficiencia"] = par.Sp / par.threads
+chave = ["maquina", "N"]
+par = par.join(seq.groupby(chave).tempo_medio_s.min().rename("Ts_med"), on=chave)
+par = par.join(seq.groupby(chave).tempo_min_s.min().rename("Ts_min"), on=chave)
+par["Sp_min"] = par.Ts_min / par.tempo_min_s
+par["Sp_med"] = par.Ts_med / par.tempo_medio_s
+par["Ef_min"] = par.Sp_min / par.threads
+par["Ef_med"] = par.Sp_med / par.threads
 par.to_csv("speedup_completo.csv", index=False)
+
+def tabela(g, valores, fmt):
+    return g.pivot(index="N", columns="threads", values=valores).round(fmt).to_markdown()
 
 with open("tabelas.md", "w", encoding="utf-8") as out:
     for maq, g in par.groupby("maquina"):
         info = g.iloc[0]
-        out.write(f"\n## {maq} - {info.cpu} ({info.nucleos} nucleos logicos)\n")
-        tb_t = g.pivot(index="N", columns="threads", values="tempo_medio_s").round(6)
-        out.write("\n### Tempo medio (s) - paralelo, por N e threads\n\n" + tb_t.to_markdown() + "\n")
-        tb_s = g.pivot(index="N", columns="threads", values="Sp").round(3)
-        out.write("\n### Speedup Sp = Ts/Tp\n\n" + tb_s.to_markdown() + "\n")
-        tb_e = g.pivot(index="N", columns="threads", values="eficiencia").round(3)
-        out.write("\n### Eficiencia Ef = Sp/p\n\n" + tb_e.to_markdown() + "\n")
-    out.write("\n## Tempo sequencial (s)\n\n" +
-              seq.pivot_table(index="N", columns="maquina", values="tempo_medio_s")
-                 .round(6).to_markdown() + "\n")
+        out.write(f"\n## {maq} - {info.cpu} ({info.nucleos} nucleos logicos, {info.repeticoes} repeticoes)\n")
+
+        out.write("\n### REFERENCIA: tempo minimo (s) - paralelo\n\n" + tabela(g, "tempo_min_s", 6) + "\n")
+        out.write("\n### REFERENCIA: Speedup pelo tempo minimo (Sp = Ts_min / Tp_min)\n\n" + tabela(g, "Sp_min", 3) + "\n")
+        out.write("\n### REFERENCIA: Eficiencia pelo tempo minimo (Ef = Sp / p)\n\n" + tabela(g, "Ef_min", 3) + "\n")
+
+        out.write("\n### Comparacao: tempo medio (s) - paralelo\n\n" + tabela(g, "tempo_medio_s", 6) + "\n")
+        out.write("\n### Comparacao: Speedup pela media (Sp_med = Ts_med / Tp_med)\n\n" + tabela(g, "Sp_med", 3) + "\n")
+
+    out.write("\n## Tempo sequencial (s), por maquina\n")
+    for col, titulo in [("tempo_min_s", "REFERENCIA: tempo minimo"),
+                        ("tempo_medio_s", "Comparacao: tempo medio")]:
+        tab = (seq.pivot_table(index="N", columns="maquina", values=col)
+                  .round(6).rename_axis(index="N", columns=None))
+        out.write(f"\n### {titulo}\n\n" + tab.to_markdown() + "\n")
 
 for maq, g in par.groupby("maquina"):
-    s = seq[seq.maquina == maq].set_index("N").tempo_medio_s
-    # 1) tempo x N: sequencial vs paralelo (threads = nucleos, se testado)
+    s = seq[seq.maquina == maq].groupby("N").tempo_min_s.min()
     nuc = int(g.nucleos.iloc[0])
     t_sel = nuc if nuc in set(g.threads) else g.threads.max()
-    p = g[g.threads == t_sel].set_index("N").tempo_medio_s
+    p = g[g.threads == t_sel].set_index("N").tempo_min_s
+
+    # 1) tempo x N (tempo minimo): sequencial vs paralelo com nucleos threads
     plt.figure(figsize=(6, 4))
     plt.plot(s.index, s.values, "o-", label="Sequencial")
     plt.plot(p.index, p.values, "s-", label=f"Paralelo ({t_sel} threads)")
     plt.xscale("log"); plt.yscale("log")
-    plt.xlabel("Tamanho do vetor N"); plt.ylabel("Tempo (s)")
+    plt.xlabel("Tamanho do vetor N"); plt.ylabel("Tempo minimo (s)")
     plt.title(f"Tempo x N - {maq}")
     plt.legend(); plt.grid(alpha=.3, which="both"); plt.tight_layout()
     plt.savefig(f"grafico_tempo_{maq}.png", dpi=150); plt.close()
 
-    # 2) speedup x threads, para varios N
+    # 2) speedup x threads (pelo tempo minimo), para varios N
     plt.figure(figsize=(6, 4))
     for N, gn in g.groupby("N"):
         gn = gn.sort_values("threads")
-        plt.plot(gn.threads, gn.Sp, "o-", label=f"N={N}")
+        plt.plot(gn.threads, gn.Sp_min, "o-", label=f"N={N}")
     mx = g.threads.max()
     plt.plot([1, mx], [1, mx], "k--", alpha=.4, label="Ideal")
-    plt.xlabel("Threads"); plt.ylabel("Speedup (Ts/Tp)")
+    plt.axhline(1, color="gray", lw=.8, ls=":")
+    plt.xlabel("Threads"); plt.ylabel("Speedup (Ts_min/Tp_min)")
     plt.title(f"Speedup x threads - {maq}")
     plt.legend(fontsize=7); plt.grid(alpha=.3); plt.tight_layout()
     plt.savefig(f"grafico_speedup_{maq}.png", dpi=150); plt.close()
